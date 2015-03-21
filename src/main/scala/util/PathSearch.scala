@@ -1,25 +1,21 @@
 package util
 
-import treefinder.Node
-
 import scala.collection.{Map, Set}
 import scala.collection.mutable.{HashMap, HashSet,PriorityQueue}
 
-class PathSearch(nodes: Map[Int, Node], neighborNodes: Map[Int, Set[Int]]) {
-    val fScores = new HashMap[Int, Double]
-    val gScores = new HashMap[Int, Double]
+class PathSearch[A](nodes: Set[A], neighborNodes: Map[A, Set[A]], getDistance: (A, A) => Double) {
+    val fScores = new HashMap[A, Double]
+    val gScores = new HashMap[A, Double]
 
-    val pathCache = new HashMap[Tuple2[Int, Int], List[Int]]
-
-    val openPQ = new PriorityQueue[Int]()(new Ordering[Int]
+    val openPQ = new PriorityQueue[A]()(new Ordering[A]
     {
-        def compare(a: Int, b: Int) = (fScores(b) - fScores(a)).toInt
+        def compare(a: A, b: A) = (fScores(b) - fScores(a)).toInt
     })
 
-    val openSet = new HashSet[Int]
-    val closedSet = new HashSet[Int]
+    val openSet = new HashSet[A]
+    val closedSet = new HashSet[A]
 
-    val cameFrom = new HashMap[Int, Int]
+    val cameFrom = new HashMap[A, A]
 
     def resetLists() {
         gScores.clear()
@@ -30,39 +26,30 @@ class PathSearch(nodes: Map[Int, Node], neighborNodes: Map[Int, Set[Int]]) {
         cameFrom.clear()
     }
 
-    def getPath(startNode: Int, destNode: Int): List[Int] =
+    def getPath(startNode: A, destNode: A): List[A] =
     {
-        def distance(a: Int, b: Int) = nodes(a).distanceTo(nodes(b))
-        //if we already searched this path, return the cached path
-        if(pathCache.contains((startNode, destNode))) return pathCache((startNode, destNode))
-
         resetLists()
 
         gScores.put(startNode, 0)
-        fScores.put(startNode, distance(startNode, destNode))
+        fScores.put(startNode, getDistance(startNode, destNode))
         openPQ += startNode
         openSet += startNode
         while(openSet.nonEmpty)
         {
             val current = openPQ.dequeue()
-            if(current == destNode)
-            {
-                val p = reconstructPath(List(current), current)
-                //dont cache the shortest paths, there will be tons of them and they are cheap to compute
-                if(p.size > 3) pathCache.put((startNode, destNode), p)
-                return p
-            }
+            if(current == destNode) return reconstructPath(List(current), current)
+
             openSet -= current
             closedSet += current
             for(n <- neighborNodes(current))
             {
-                val tentGScore = gScores(current) + distance(current, n)
+                val tentGScore = gScores(current) + getDistance(current, n)
                 if(closedSet.contains(n) && tentGScore >= gScores(n)) {}
                 else if(!openSet.contains(n) || tentGScore < gScores(n))
                 {
                     cameFrom(n) = current
                     gScores(n) = tentGScore
-                    fScores(n) = gScores(n) + distance(n, destNode)
+                    fScores(n) = gScores(n) + getDistance(n, destNode)
                     if(!openSet.contains(n))
                     {
                         openPQ += n
@@ -74,7 +61,7 @@ class PathSearch(nodes: Map[Int, Node], neighborNodes: Map[Int, Set[Int]]) {
         null
     }
 
-    def reconstructPath(path: List[Int], dest: Int): List[Int] =
+    def reconstructPath(path: List[A], dest: A): List[A] =
     {
         if(!cameFrom.contains(dest)) return path
         reconstructPath(cameFrom(dest) :: path, cameFrom(dest))

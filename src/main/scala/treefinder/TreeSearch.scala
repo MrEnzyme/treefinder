@@ -15,7 +15,7 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
     // average numerical values for a given node of each stat
     val averageStatValues: Map[String, Double] = for((stat, amount) <- treeStatTotals) yield (stat, amount/nodeSet.values.count(_.effects.contains(stat)))
 
-    val pathSearch = new PathSearch(nodeSet, neighbors)
+    val pathSearch = new PathSearch[Int](nodeSet.keySet, neighbors, (a: Int, b: Int) => nodeSet(a).distanceTo(nodeSet(b)))
 
     def findTree(constraints: ConstraintSet) = {
         val openSet = new LinkedHashSet[Int]
@@ -30,9 +30,16 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
         }
     }
 
+    /*
+     * Heuristic function for scoring a given tree based on how well
+     * it fulfills the given constraints. The more it satisfies the constraints,
+     * the higher the score.
+     */
     def scoreTree(tree: Set[Int], constraints: ConstraintSet): Double = {
         def scoreKeystones = tree.intersect(constraints.keystones).size
-        def scoreEffects = for((stat, amount) <- sumStats(tree); if constraints.effectNames.contains(stat)) yield amount/averageStatValues(stat)
+        def scoreEffects =
+            for((stat, amount) <- sumStats(tree); if constraints.effects.isDefinedAt(stat))
+                yield math.min(amount, constraints.effects(stat).min)/averageStatValues(stat)
 
         scoreKeystones + scoreEffects.sum
     }
@@ -46,8 +53,8 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
 
         // ensure the tree's stat totals are within bounds for each given effect
         val statTotals = sumStats(tree)
-        for(effect <- constraints.effects)
-            if(effect.max < statTotals(effect.name) || effect.min > statTotals(effect.name)) return false
+        for((name, effect) <- constraints.effects)
+            if(effect.max < statTotals(name) || effect.min > statTotals(name)) return false
 
         true
     }

@@ -18,7 +18,7 @@ object TreeFinder {
         //println(search.averageStatValues.toSeq.sorted.mkString("\n"))
         println(search.pathSearch.getPath(17788, 11455))
         println(exportTree(6, search.pathSearch.getPath(17788, 11455)))
-        val constraints = ConstraintSet(30, Set(), Set(11455))
+        val constraints = ConstraintSet(30, Map(), Set(11455))
     }
 
     // load the skill tree nodes into a map by id

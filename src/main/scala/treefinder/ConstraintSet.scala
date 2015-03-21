@@ -1,6 +1,4 @@
 package treefinder
 
-case class Effect(name: String, max: Double = Double.MaxValue, min: Double = Double.MinValue)
-case class ConstraintSet(maxPoints: Int = 120, effects: Set[Effect] = Set(), keystones: Set[Int] = Set()) {
-    val effectNames = effects.map(_.name)
-}
+case class Effect(max: Double = Double.MaxValue, min: Double = 0.0)
+case class ConstraintSet(maxPoints: Int = 120, effects: Map[String, Effect] = Map(), keystones: Set[Int] = Set())
