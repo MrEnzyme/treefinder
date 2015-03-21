@@ -2,9 +2,10 @@ package treefinder
 
 import util.PathSearch
 
+import scala.collection.{Map, Set}
 import scala.collection.mutable.{LinkedHashSet, LinkedHashMap}
 
-class TreeSearch(nodeSet: LinkedHashMap[Int, Node]) {
+class TreeSearch(nodeSet: Map[Int, Node]) {
     // map of neighbor nodes
     val neighbors = determineNeighbors(nodeSet)
 
@@ -29,7 +30,7 @@ class TreeSearch(nodeSet: LinkedHashMap[Int, Node]) {
         }
     }
 
-    def scoreTree(tree: LinkedHashSet[Int], constraints: ConstraintSet): Double = {
+    def scoreTree(tree: Set[Int], constraints: ConstraintSet): Double = {
         def scoreKeystones = tree.intersect(constraints.keystones).size
         def scoreEffects = for((stat, amount) <- sumStats(tree); if constraints.effectNames.contains(stat)) yield amount/averageStatValues(stat)
 
@@ -37,7 +38,7 @@ class TreeSearch(nodeSet: LinkedHashMap[Int, Node]) {
     }
 
     // check if a given tree satisfies a set of constraints
-    def satisfiesConstraints(tree: LinkedHashSet[Int], constraints: ConstraintSet): Boolean = {
+    def satisfiesConstraints(tree: Set[Int], constraints: ConstraintSet): Boolean = {
         if(tree.size > constraints.maxPoints) return false
 
         // ensure all the required keystones are present
@@ -52,7 +53,7 @@ class TreeSearch(nodeSet: LinkedHashMap[Int, Node]) {
     }
 
     // returns a map of nodes to the set of their neighbors
-    def determineNeighbors(nodes: LinkedHashMap[Int, Node]) = {
+    def determineNeighbors(nodes: Map[Int, Node]): Map[Int, Set[Int]] = {
         val neighborMap = new LinkedHashMap[Int, LinkedHashSet[Int]]
         // make the first pass through
         for((id, node) <- nodes) {
@@ -64,7 +65,7 @@ class TreeSearch(nodeSet: LinkedHashMap[Int, Node]) {
     }
 
     // returns a map of total values for each stat in the given tree
-    def sumStats(tree: Traversable[Int]) = {
+    def sumStats(tree: Traversable[Int]): Map[String, Double] = {
         val statTotals = new LinkedHashMap[String, Double]
 
         val chosenNodes = tree.map(nodeSet(_))

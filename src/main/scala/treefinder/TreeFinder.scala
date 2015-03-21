@@ -4,7 +4,7 @@ import com.github.pathikrit.dijon
 import org.apache.commons.codec.binary.Base64
 import util.math.Point
 
-import scala.collection.mutable.{LinkedHashMap, LinkedHashSet}
+import scala.collection.mutable.LinkedHashMap
 import scala.io.Source
 import scala.util.matching.Regex
 

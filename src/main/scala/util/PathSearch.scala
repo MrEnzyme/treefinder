@@ -2,9 +2,10 @@ package util
 
 import treefinder.Node
 
-import scala.collection.mutable.{HashMap, HashSet, LinkedHashMap, LinkedHashSet, PriorityQueue}
+import scala.collection.{Map, Set}
+import scala.collection.mutable.{HashMap, HashSet,PriorityQueue}
 
-class PathSearch(nodes: LinkedHashMap[Int, Node], neighborNodes: LinkedHashMap[Int, LinkedHashSet[Int]]) {
+class PathSearch(nodes: Map[Int, Node], neighborNodes: Map[Int, Set[Int]]) {
     val fScores = new HashMap[Int, Double]
     val gScores = new HashMap[Int, Double]
 
