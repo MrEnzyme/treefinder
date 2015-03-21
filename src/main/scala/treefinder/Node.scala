@@ -1,3 +1,7 @@
 package treefinder
 
-case class Node(name: String, keystone: Boolean, classNode: Int, effects: Traversable[String], neighbors: Set[Int])
+import util.math.{Locatable, Point}
+
+case class NodeGroup(coords: Point, nodes: Set[Int])
+case class Node(name: String, coords: Point, keystone: Boolean, effects: Map[String, Double], neighbors: Set[Int]) extends Locatable(coords)
+

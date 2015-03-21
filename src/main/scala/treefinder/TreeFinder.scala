@@ -2,65 +2,66 @@ package treefinder
 
 import com.github.pathikrit.dijon
 import org.apache.commons.codec.binary.Base64
+import util.math.Point
 
 import scala.collection.mutable.{LinkedHashMap, LinkedHashSet}
 import scala.io.Source
-import scala.util.Random
 import scala.util.matching.Regex
 
 object TreeFinder {
     def main(args: Array[String]) {
         println(exportTree(6, Seq(17788, 11334, 38807)))
+
+        val nodes = loadTree("tree.json")
+        val search = new TreeSearch(nodes)
+
+        //println(search.averageStatValues.toSeq.sorted.mkString("\n"))
+        println(search.pathSearch.getPath(17788, 11455))
+        println(exportTree(6, search.pathSearch.getPath(17788, 11455)))
+        val constraints = ConstraintSet(30, Set(), Set(11455))
+    }
+
+    // load the skill tree nodes into a map by id
+    def loadTree(fileName: String) = {
         val nodes = new LinkedHashMap[Int, Node]
 
-        val treeJson = Source.fromFile("tree.json").mkString
-        //println(treeJson.substring(0, 10))
+        val treeJson = Source.fromFile(fileName).mkString
         val start = System.currentTimeMillis()
-        val nodeData = dijon.parse(treeJson.substring(1)).skillTreeData.nodes.toSeq
+        val tree = dijon.parse(treeJson.substring(1)).skillTreeData
         println("parsed json in " + (System.currentTimeMillis() - start) + " ms")
 
-        for(node <- nodeData) {
+        val groups = for((id, group) <- tree.groups.toMap)
+        yield (id.toInt, NodeGroup(Point(group.x.as[Double].get, group.y.as[Double].get), group.n.toSeq.map(_.as[Double].get.toInt).toSet))
+
+        val numberPattern = new Regex("\\d+(\\.\\d*)?")
+
+        // find the seven invisible root class nodes so they can be removed from the search tree
+        val classNodes = tree.nodes.toSeq.filter(_.spc.toSeq.nonEmpty).map(_.id.as[Double].get.toInt).toSet
+
+        // constants for calculating node positions relative to group
+        val skillsPerOrbit = Array[Int](1, 6, 12, 12, 12)
+        val orbitRadii = Array[Float](0, 81.5f, 163, 326, 489)
+
+        for(node <- tree.nodes.toSeq) {
             val neighbors = node.out.toSeq.map(_.as[Double].get.toInt).toSet
-            val classNode = if(node.spc.toSeq.isEmpty) -1 else node.spc.toSeq(0).as[Double].get.toInt
-            nodes(node.id.as[Double].get.toInt) = Node(node.dn.toString, node.ks.as[Boolean].get, classNode, node.sd.toSeq.map(_.toString), neighbors)
+
+            // offset the node position from its group position using orbit/orbitIndex
+            val orbit = node.o.as[Double].get.toInt
+            val orbitIndex = node.oidx.as[Double].get
+            val d = orbitRadii(orbit)
+            val b = (2*Math.PI*orbitIndex)/skillsPerOrbit(orbit)
+            val coords = groups(node.g.as[Double].get.toInt).coords - Point(d*math.sin(-b), d*math.cos(-b))
+
+            val effects =
+                for(effect <- node.sd.toSeq.map(_.toString)) yield {
+                    val amount = numberPattern.findFirstIn(effect)
+                    if(amount.isDefined) (effect.replace(amount.get, "XX"), amount.get.toDouble)
+                    else (effect, 1.0)
+                }
+            nodes(node.id.as[Double].get.toInt) = Node(node.dn.toString, coords, node.ks.as[Boolean].get, effects.toMap, neighbors.diff(classNodes))
         }
 
-        val random = randomTree(44683, nodes)
-        //println(sumStats(random, nodes).map(s => s._1.replace("XX", s._2.toString)).mkString("\n"))
-        //println(exportTree(6, random.toSeq))
-
-        //val sorted = statTotals.toSeq.sorted
-        //for((stat, amount) <- sorted) println(stat.replace("XXXX", amount.toString))
-    }
-
-    def sumStats(chosen: Traversable[Int], nodes: LinkedHashMap[Int, Node]) = {
-        val statTotals = new LinkedHashMap[String, Double]
-        val number = new Regex("\\d+(\\.\\d*)?")
-        val chosenNodes = chosen.map(nodes(_))
-
-        for(node <- chosenNodes; effect <- node.effects) {
-            if(number.findAllIn(effect).length > 1) println("found 2 numbers")
-            val amount = number.findFirstIn(effect)
-            if(amount.isDefined) {
-                val effectName = effect.replace(amount.get, "XX")
-                if(statTotals.contains(effectName)) statTotals(effectName) += amount.get.toDouble
-                else statTotals(effectName) = amount.get.toDouble
-            }
-            else statTotals(effect) = 0
-        }
-
-        statTotals
-    }
-
-    def determineNeighbors(nodes: LinkedHashMap[Int, Node]) = {
-        val neighborMap = new LinkedHashMap[Int, LinkedHashSet[Int]]
-        // make the first pass through
-        for((id, node) <- nodes) {
-            if(!neighborMap.contains(id)) neighborMap(id) = new LinkedHashSet[Int]
-            neighborMap(id) ++= node.neighbors
-        }
-        for((id, neighbors) <- neighborMap; neighbor <- neighbors) neighborMap(neighbor) += id
-        neighborMap
+        nodes
     }
 
     def exportTree(charNum: Byte, nodes: Seq[Int]): String = {
@@ -75,22 +76,5 @@ object TreeFinder {
         }
 
         "http://www.pathofexile.com/passive-skill-tree/" + Base64.encodeBase64String(bytes).replace("/", "_").replace("+", "-")
-    }
-
-    def randomTree(start: Int, nodes: LinkedHashMap[Int, Node]) = {
-        val neighbors = determineNeighbors(nodes)
-        val openSet = new LinkedHashSet[Int]
-        val chosen = new LinkedHashSet[Int]
-
-        openSet += start
-
-        while(chosen.size < 100) {
-            val next = openSet.toVector(Random.nextInt(openSet.size))
-            chosen += next
-            openSet -= next
-            for(neighbor <- neighbors(next); if !chosen.contains(neighbor)) openSet += neighbor
-        }
-
-        chosen
     }
 }
