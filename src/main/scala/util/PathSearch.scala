@@ -3,12 +3,11 @@ package util
 import scala.collection.{Map, Set}
 import scala.collection.mutable.{HashMap, HashSet,PriorityQueue}
 
-class PathSearch[A](nodes: Set[A], neighborNodes: Map[A, Set[A]], getDistance: (A, A) => Double) {
+class PathSearch[A](getNeighbors: A => Set[A], getDistance: (A, A) => Double) {
     val fScores = new HashMap[A, Double]
     val gScores = new HashMap[A, Double]
 
-    val openPQ = new PriorityQueue[A]()(new Ordering[A]
-    {
+    val openPQ = new PriorityQueue[A]()(new Ordering[A] {
         def compare(a: A, b: A) = (fScores(b) - fScores(a)).toInt
     })
 
@@ -26,32 +25,27 @@ class PathSearch[A](nodes: Set[A], neighborNodes: Map[A, Set[A]], getDistance: (
         cameFrom.clear()
     }
 
-    def getPath(startNode: A, destNode: A): List[A] =
-    {
+    def getPath(startNode: A, destNode: A): List[A] = {
         resetLists()
 
         gScores.put(startNode, 0)
         fScores.put(startNode, getDistance(startNode, destNode))
         openPQ += startNode
         openSet += startNode
-        while(openSet.nonEmpty)
-        {
+        while(openSet.nonEmpty) {
             val current = openPQ.dequeue()
             if(current == destNode) return reconstructPath(List(current), current)
 
             openSet -= current
             closedSet += current
-            for(n <- neighborNodes(current))
-            {
+            for(n <- getNeighbors(current)) {
                 val tentGScore = gScores(current) + getDistance(current, n)
                 if(closedSet.contains(n) && tentGScore >= gScores(n)) {}
-                else if(!openSet.contains(n) || tentGScore < gScores(n))
-                {
+                else if(!openSet.contains(n) || tentGScore < gScores(n)) {
                     cameFrom(n) = current
                     gScores(n) = tentGScore
                     fScores(n) = gScores(n) + getDistance(n, destNode)
-                    if(!openSet.contains(n))
-                    {
+                    if(!openSet.contains(n)) {
                         openPQ += n
                         openSet += n
                     }
@@ -61,8 +55,7 @@ class PathSearch[A](nodes: Set[A], neighborNodes: Map[A, Set[A]], getDistance: (
         null
     }
 
-    def reconstructPath(path: List[A], dest: A): List[A] =
-    {
+    def reconstructPath(path: List[A], dest: A): List[A] = {
         if(!cameFrom.contains(dest)) return path
         reconstructPath(cameFrom(dest) :: path, cameFrom(dest))
     }

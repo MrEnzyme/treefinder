@@ -15,7 +15,7 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
     // average numerical values for a given node of each stat
     val averageStatValues: Map[String, Double] = for((stat, amount) <- treeStatTotals) yield (stat, amount/nodeSet.values.count(_.effects.contains(stat)))
 
-    val pathSearch = new PathSearch[Int](nodeSet.keySet, neighbors, (a: Int, b: Int) => nodeSet(a).distanceTo(nodeSet(b)))
+    val pathSearch = new PathSearch[Int](n => neighbors(n), (a: Int, b: Int) => nodeSet(a).distanceTo(nodeSet(b)))
 
     def findTree(constraints: ConstraintSet) = {
         val openSet = new LinkedHashSet[Int]
