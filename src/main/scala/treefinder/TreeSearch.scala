@@ -22,6 +22,7 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
         val tree = new LinkedHashSet[Int]
 
         val requiredNodes = constraints.keystones
+        val relevantNodes = Set()
 
         openSet ++= List(17788, 45272)
 
@@ -32,7 +33,7 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
 
     /*
      * Heuristic function for scoring a given tree based on how well
-     * it fulfills the given constraints. The more it satisfies the constraints,
+     * it fulfills the given constraints. The more constraints it satisfies,
      * the higher the score.
      */
     def scoreTree(tree: Set[Int], constraints: ConstraintSet): Double = {

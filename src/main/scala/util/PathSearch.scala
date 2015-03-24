@@ -3,7 +3,7 @@ package util
 import scala.collection.{Map, Set}
 import scala.collection.mutable.{HashMap, HashSet,PriorityQueue}
 
-class PathSearch[A](nodes: Set[A], neighborNodes: Map[A, Set[A]], getDistance: (A, A) => Double) {
+class PathSearch[A](val nodes: Set[A], val neighborNodes: Map[A, Set[A]], getDistance: (A, A) => Double) {
     val fScores = new HashMap[A, Double]
     val gScores = new HashMap[A, Double]
 

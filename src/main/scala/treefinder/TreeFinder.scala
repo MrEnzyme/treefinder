@@ -2,23 +2,39 @@ package treefinder
 
 import com.github.pathikrit.dijon
 import org.apache.commons.codec.binary.Base64
+import util.PathSearch
 import util.math.Point
 
 import scala.collection.mutable.LinkedHashMap
 import scala.io.Source
 import scala.util.matching.Regex
+import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
+import scala.concurrent.ExecutionContext.Implicits.global
 
 object TreeFinder {
-    def main(args: Array[String]) {
-        println(exportTree(6, Seq(17788, 11334, 38807)))
+    val treeFile = "tree.json"
+    val pathFile = "paths.dat"
 
-        val nodes = loadTree("tree.json")
+    def main(args: Array[String]) {
+        // load the tree data and path map concurrently
+        val loadResources = for {
+            nodes <- Future(loadTree(treeFile))
+            paths <- Future(PathComputation.loadPaths(pathFile))
+        } yield (nodes, paths)
+
+        val (nodes, paths) = Await.result(loadResources, 15.seconds)
+        println(paths(17788)(11455))
+        println(nodes.keys.max)
         val search = new TreeSearch(nodes)
 
-        //println(search.averageStatValues.toSeq.sorted.mkString("\n"))
-        println(search.pathSearch.getPath(17788, 11455))
-        println(exportTree(6, search.pathSearch.getPath(17788, 11455)))
-        val constraints = ConstraintSet(30, Map(), Set(11455))
+    }
+
+    def generatePathsFile() {
+        val nodes = loadTree(treeFile)
+        val search = new TreeSearch(nodes).pathSearch
+        val paths = PathComputation.computeAllPaths(search, search.nodes, search.neighborNodes)
+        PathComputation.savePaths(paths, pathFile)
     }
 
     // load the skill tree nodes into a map by id
@@ -27,7 +43,7 @@ object TreeFinder {
 
         val treeJson = Source.fromFile(fileName).mkString
         val start = System.currentTimeMillis()
-        val tree = dijon.parse(treeJson.substring(1)).skillTreeData
+        val tree = dijon.parse(treeJson.substring(treeJson.indexOf{"{"})).skillTreeData
         println("parsed json in " + (System.currentTimeMillis() - start) + " ms")
 
         val groups = for((id, group) <- tree.groups.toMap)
