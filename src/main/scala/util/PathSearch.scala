@@ -3,7 +3,7 @@ package util
 import scala.collection.{Map, Set}
 import scala.collection.mutable.{HashMap, HashSet,PriorityQueue}
 
-class PathSearch[A](getNeighbors: A => Set[A], getDistance: (A, A) => Double) {
+class PathSearch[A](getNeighbors: A => Set[A], getDistance: (A, A) => Double, estimateDistance: (A, A) => Double) {
     val fScores = new HashMap[A, Double]
     val gScores = new HashMap[A, Double]
 
@@ -44,7 +44,7 @@ class PathSearch[A](getNeighbors: A => Set[A], getDistance: (A, A) => Double) {
                 else if(!openSet.contains(n) || tentGScore < gScores(n)) {
                     cameFrom(n) = current
                     gScores(n) = tentGScore
-                    fScores(n) = gScores(n) + getDistance(n, destNode)
+                    fScores(n) = gScores(n) + estimateDistance(n, destNode)
                     if(!openSet.contains(n)) {
                         openPQ += n
                         openSet += n

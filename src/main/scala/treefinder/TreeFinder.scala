@@ -2,7 +2,6 @@ package treefinder
 
 import com.github.pathikrit.dijon
 import org.apache.commons.codec.binary.Base64
-import util.PathSearch
 import util.math.Point
 
 import scala.collection.{Map, Set}
@@ -25,10 +24,12 @@ object TreeFinder {
         } yield (nodes, paths)
 
         val (nodes, paths) = Await.result(loadResources, 30.seconds)
-        println(paths(17788)(11455))
-        println(nodes.keys.max)
         val search = new TreeSearch(nodes)
+        println(exportTree(6, search.pathSearch.getPath(14914, 23540)))
 
+        val tree = search.findTree(ConstraintSet(keystones = Set(14914, 23540)), paths).toSeq
+        println("found tree ", tree)
+        println(exportTree(6, tree))
     }
 
     def generatePathsFile() {
@@ -48,7 +49,7 @@ object TreeFinder {
         println("parsed json in " + (System.currentTimeMillis() - start) + " ms")
 
         val groups = for((id, group) <- tree.groups.toMap)
-        yield (id.toInt, NodeGroup(Point(group.x.as[Double].get, group.y.as[Double].get), group.n.toSeq.map(_.as[Double].get.toInt).toSet))
+            yield (id.toInt, NodeGroup(Point(group.x.as[Double].get, group.y.as[Double].get), group.n.toSeq.map(_.as[Double].get.toInt).toSet))
 
         val numberPattern = new Regex("\\d+(\\.\\d*)?")
 

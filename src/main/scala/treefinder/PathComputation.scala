@@ -52,6 +52,7 @@ object PathComputation {
         }
         channel.close()
     }
+
     def loadPaths(pathFile: String): Map[Int, Map[Int, IndexedSeq[Int]]] = {
         val startTime = System.currentTimeMillis()
 

@@ -15,34 +15,45 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
     // average numerical values for a given node of each stat
     val averageStatValues: Map[String, Double] = for((stat, amount) <- treeStatTotals) yield (stat, amount/nodeSet.values.count(_.effects.contains(stat)))
 
-    val pathSearch = new PathSearch[Int](n => neighbors(n), (a, b) => nodeSet(a).distanceTo(nodeSet(b)))
+    val pathSearch = new PathSearch[Int](n => neighbors(n), (a, b) => 1, (a, b) => 1.0 - 1.0/nodeSet(a).distanceTo(nodeSet(b)))
 
-    def findTree(constraints: ConstraintSet) = {
-        val openSet = new LinkedHashSet[Int]
+    def findTree(constraints: ConstraintSet, paths: Map[Int, Map[Int, IndexedSeq[Int]]]): Set[Int] = {
         val tree = new LinkedHashSet[Int]
 
         val requiredNodes = constraints.keystones
-        val relevantNodes = Set()
+        val optionalNodes = Set()
+        val relevantNodes = requiredNodes ++ optionalNodes
 
-        openSet ++= List(17788, 45272)
+        tree += 44683
+
+        def getPath(a: Int, b: Int) = pathSearch.getPath(a, b)
+
+        // returns the closest node in the tree to the given node
+        def closestNode(node: Int, tree: Set[Int]) = {
+            println(node, tree.map(getPath(node, _)))
+            tree.minBy(getPath(node, _).length)
+        }
+
+        // scores a node based on the amount of stats it provides relative to the average
+        def scoreNode(node: Int): Double = {
+            if(requiredNodes.contains(node)) return 1.0
+            // take only the effects in this node that we care about
+            val relevantEffects = nodeSet(node).effects.filterKeys(constraints.effects.contains)
+            // map their values relative to the average and sum them to get the final score
+            relevantEffects.map(e => e._2/averageStatValues(e._1)).sum
+        }
+
+        // score all the nodes in the tree
+        val nodeScores: Map[Int, Double] = for((id, node) <- nodeSet) yield id -> scoreNode(id)
 
         while(!satisfiesConstraints(tree, constraints)) {
-
+            val remainingRelevantNodes = relevantNodes.diff(tree)
+            val nextNode = remainingRelevantNodes.maxBy(nodeScores(_))
+            val closest = closestNode(nextNode, tree)
+            tree ++= getPath(nextNode, closest)
         }
-    }
 
-    /*
-     * Heuristic function for scoring a given tree based on how well
-     * it fulfills the given constraints. The more constraints it satisfies,
-     * the higher the score.
-     */
-    def scoreTree(tree: Set[Int], constraints: ConstraintSet): Double = {
-        def scoreKeystones = tree.intersect(constraints.keystones).size
-        def scoreEffects =
-            for((stat, amount) <- sumStats(tree); if constraints.effects.isDefinedAt(stat))
-                yield math.min(amount, constraints.effects(stat).min)/averageStatValues(stat)
-
-        scoreKeystones + scoreEffects.sum
+        tree
     }
 
     // check if a given tree satisfies a set of constraints
