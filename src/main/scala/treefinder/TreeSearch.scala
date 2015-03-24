@@ -19,22 +19,21 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
 
     def findTree(constraints: ConstraintSet, paths: Map[Int, Map[Int, IndexedSeq[Int]]]): Set[Int] = {
         val tree = new LinkedHashSet[Int]
+        val openSet = new LinkedHashSet[Int]
 
         val requiredNodes = constraints.keystones
         val optionalNodes = Set()
         val relevantNodes = requiredNodes ++ optionalNodes
 
         tree += 44683
+        openSet ++= List(45272, 17788)
 
-        def getPath(a: Int, b: Int) = pathSearch.getPath(a, b)
+        def getPath(a: Int, b: Int) = paths(a)(b)
+        def getDistance(a: Int, b: Int) = getPath(a, b).length
 
-        // returns the closest node in the tree to the given node
-        def closestNode(node: Int, tree: Set[Int]) = {
-            println(node, tree.map(getPath(node, _)))
-            tree.minBy(getPath(node, _).length)
-        }
+        def distanceToTree(node: Int, tree: Set[Int]) = getDistance(node, tree.minBy(getDistance(node, _)))
 
-        // scores a node based on the amount of stats it provides relative to the average
+        // scores a node in isolation based on its point-value
         def scoreNode(node: Int): Double = {
             if(requiredNodes.contains(node)) return 1.0
             // take only the effects in this node that we care about
@@ -46,14 +45,26 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
         // score all the nodes in the tree
         val nodeScores: Map[Int, Double] = for((id, node) <- nodeSet) yield id -> scoreNode(id)
 
-        while(!satisfiesConstraints(tree, constraints)) {
-            val remainingRelevantNodes = relevantNodes.diff(tree)
-            val nextNode = remainingRelevantNodes.maxBy(nodeScores(_))
-            val closest = closestNode(nextNode, tree)
-            tree ++= getPath(nextNode, closest)
+        // finds the overall score for a node, accounting for its distance to other nodes relative to their point-value
+        def evaluateNode(node: Int, relevant: Set[Int]): Double = {
+            if(requiredNodes.contains(node)) return nodeScores(node)
+            val sum = relevant.toSeq.map(n => nodeScores(n)*getDistance(node, n))
+            if(node == 45272 || node == 17788) println(relevant.size, node, sum.sum, sum)
+            nodeScores(node) + relevant.toSeq.map(n => nodeScores(n)*getDistance(node, n)).sum
         }
 
-        tree
+        while(!satisfiesConstraints(tree, constraints)) {
+            val remainingRelevantNodes = relevantNodes.diff(tree)
+            val nextNode = openSet.minBy(evaluateNode(_, remainingRelevantNodes))
+            for(node <- openSet) print(node, nodeSet(node).name, nodeSet(node).coords, evaluateNode(node, remainingRelevantNodes))
+            println("\nchoosing ", nodeSet(nextNode).name, nextNode)
+            openSet -= nextNode
+            tree += nextNode
+            openSet ++= neighbors(nextNode).diff(tree)
+            println("tree size:", tree.size)
+        }
+
+        tree - 44683
     }
 
     // check if a given tree satisfies a set of constraints
