@@ -5,6 +5,7 @@ import org.apache.commons.codec.binary.Base64
 import util.PathSearch
 import util.math.Point
 
+import scala.collection.{Map, Set}
 import scala.collection.mutable.LinkedHashMap
 import scala.io.Source
 import scala.util.matching.Regex
@@ -23,7 +24,7 @@ object TreeFinder {
             paths <- Future(PathComputation.loadPaths(pathFile))
         } yield (nodes, paths)
 
-        val (nodes, paths) = Await.result(loadResources, 15.seconds)
+        val (nodes, paths) = Await.result(loadResources, 30.seconds)
         println(paths(17788)(11455))
         println(nodes.keys.max)
         val search = new TreeSearch(nodes)
@@ -32,8 +33,8 @@ object TreeFinder {
 
     def generatePathsFile() {
         val nodes = loadTree(treeFile)
-        val search = new TreeSearch(nodes).pathSearch
-        val paths = PathComputation.computeAllPaths(search, search.nodes, search.neighborNodes)
+        val search = new TreeSearch(nodes)
+        val paths = PathComputation.computeAllPaths(search.pathSearch, nodes.keySet, search.determineNeighbors(nodes))
         PathComputation.savePaths(paths, pathFile)
     }
 
