@@ -18,15 +18,12 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
     val pathSearch = new PathSearch[Int](n => neighbors(n), (a, b) => 1, (a, b) => 1.0 - 1.0/nodeSet(a).distanceTo(nodeSet(b)))
 
     def findTree(constraints: ConstraintSet, paths: Map[Int, Map[Int, IndexedSeq[Int]]]): Set[Int] = {
-        val tree = new LinkedHashSet[Int]
-        val openSet = new LinkedHashSet[Int]
+        val tree = Set(44683)
+        val openSet = Set(45272, 17788)
 
         val requiredNodes = constraints.keystones
         val optionalNodes = Set()
         val relevantNodes = requiredNodes ++ optionalNodes
-
-        tree += 44683
-        openSet ++= List(45272, 17788)
 
         def getPath(a: Int, b: Int) = paths(a)(b)
         def getDistance(a: Int, b: Int) = getPath(a, b).length
@@ -49,30 +46,57 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
         def evaluateNode(node: Int, relevant: Set[Int]): Double = {
             if(requiredNodes.contains(node)) return nodeScores(node)
             val sum = relevant.toSeq.map(n => nodeScores(n)*getDistance(node, n))
-            if(node == 45272 || node == 17788) println(relevant.size, node, sum.sum, sum)
+            //if(node == 45272 || node == 17788) println(relevant.size, node, sum.sum, sum)
             nodeScores(node) + relevant.toSeq.map(n => nodeScores(n)*getDistance(node, n)).sum
         }
 
-        while(!satisfiesConstraints(tree, constraints)) {
+        def getFurthestRequired(tree: Set[Int], required: Set[Int]) = required.map(distanceToTree(_, tree)).max
+
+        def search(tree: Set[Int], openSet: Set[Int], best: Int): Set[Int] = {
+            if(satisfiesConstraints(tree, constraints)) {
+                if(tree.size < best)
+                    println("found better tree of length: " + tree.size + "\n" + tree.toSeq.map(nodeSet(_).name) + "\n" + TreeFinder.exportTree(6, tree.toSeq))
+                return tree
+            }
+            else if(tree.size > best) return null
+
             val remainingRelevantNodes = relevantNodes.diff(tree)
-            val nextNode = openSet.minBy(evaluateNode(_, remainingRelevantNodes))
-            for(node <- openSet) print(node, nodeSet(node).name, nodeSet(node).coords, evaluateNode(node, remainingRelevantNodes))
-            println("\nchoosing ", nodeSet(nextNode).name, nextNode)
-            openSet -= nextNode
-            tree += nextNode
-            openSet ++= neighbors(nextNode).diff(tree)
-            println("tree size:", tree.size)
+            val minRemainingDistance = getFurthestRequired(tree, remainingRelevantNodes)
+            if(minRemainingDistance > best - tree.size) return null
+
+            val scores = openSet.toSeq.sortBy(evaluateNode(_, remainingRelevantNodes))
+
+            println(tree)
+            for(s <- scores) print(nodeSet(s).name, s, evaluateNode(s, remainingRelevantNodes))
+            println()
+
+            var shortestTreeLength = best
+            var shortestTree: Set[Int] = null
+
+            for(s <- scores) {
+                val bestTree = search(tree + s, openSet ++ neighbors(s).diff(tree) - s, shortestTreeLength)
+                if(bestTree != null) {
+                    if(bestTree.size < shortestTreeLength) {
+                        //println("old min size: " + shortestTreeLength)
+                        //println(nodeSet(s).name)
+                        shortestTreeLength = bestTree.size
+                        shortestTree = bestTree
+                    }
+                }
+            }
+            shortestTree
         }
 
+        search(tree, openSet, constraints.maxPoints)
         tree - 44683
     }
 
     // check if a given tree satisfies a set of constraints
     def satisfiesConstraints(tree: Set[Int], constraints: ConstraintSet): Boolean = {
-        if(tree.size > constraints.maxPoints) return false
-
         // ensure all the required keystones are present
-        for(keystone <- constraints.keystones; if !tree.contains(keystone)) return false
+        if(!constraints.keystones.subsetOf(tree)) return false
+
+        if(tree.size > constraints.maxPoints) return false
 
         // ensure the tree's stat totals are within bounds for each given effect
         val statTotals = sumStats(tree)

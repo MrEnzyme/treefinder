@@ -25,8 +25,9 @@ object TreeFinder {
 
         val (nodes, paths) = Await.result(loadResources, 30.seconds)
         val search = new TreeSearch(nodes)
-        println(exportTree(6, search.pathSearch.getPath(14914, 23540)))
 
+        // 5823, 35894
+        // 14914, 23540
         val tree = search.findTree(ConstraintSet(keystones = Set(14914, 23540)), paths).toSeq
         println("found tree ", tree)
         println(exportTree(6, tree))
