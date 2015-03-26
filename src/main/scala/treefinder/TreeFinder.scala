@@ -28,7 +28,8 @@ object TreeFinder {
 
         // 5823, 35894
         // 14914, 23540
-        val tree = search.findTree(ConstraintSet(keystones = Set(14914, 23540)), paths).toSeq
+        // , 24426, 31703
+        val tree = search.findTree(ConstraintSet(keystones = Set(14914, 23540, 11455)), paths).toSeq
         println("found tree ", tree)
         println(exportTree(6, tree))
     }

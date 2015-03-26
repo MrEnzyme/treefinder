@@ -22,13 +22,14 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
         val openSet = Set(45272, 17788)
 
         val requiredNodes = constraints.keystones
-        val optionalNodes = Set()
+        val optionalNodes: Set[Int] = Set()
         val relevantNodes = requiredNodes ++ optionalNodes
 
         def getPath(a: Int, b: Int) = paths(a)(b)
         def getDistance(a: Int, b: Int) = getPath(a, b).length
 
         def distanceToTree(node: Int, tree: Set[Int]) = getDistance(node, tree.minBy(getDistance(node, _)))
+        def getPathToTree(node: Int, tree: Set[Int]) = getPath(node, tree.minBy(getDistance(node, _)))
 
         // scores a node in isolation based on its point-value
         def scoreNode(node: Int): Double = {
@@ -44,10 +45,11 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
 
         // finds the overall score for a node, accounting for its distance to other nodes relative to their point-value
         def evaluateNode(node: Int, relevant: Set[Int]): Double = {
-            if(requiredNodes.contains(node)) return nodeScores(node)
-            val sum = relevant.toSeq.map(n => nodeScores(n)*getDistance(node, n))
-            //if(node == 45272 || node == 17788) println(relevant.size, node, sum.sum, sum)
-            nodeScores(node) + relevant.toSeq.map(n => nodeScores(n)*getDistance(node, n)).sum
+            if(requiredNodes.contains(node)) return 0.0
+
+            val overlaidPathSize = relevant.map(getPath(node, _)).flatten.size
+
+            nodeScores(node) + (relevant.toSeq.map(n => nodeScores(n)).sum * overlaidPathSize)
         }
 
         def getFurthestRequired(tree: Set[Int], required: Set[Int]) = required.map(distanceToTree(_, tree)).max
@@ -66,9 +68,9 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
 
             val scores = openSet.toSeq.sortBy(evaluateNode(_, remainingRelevantNodes))
 
-            println(tree)
-            for(s <- scores) print(nodeSet(s).name, s, evaluateNode(s, remainingRelevantNodes))
-            println()
+            //println(TreeFinder.exportTree(6, tree.toSeq))
+            //for(s <- scores) print(nodeSet(s).name, s, evaluateNode(s, remainingRelevantNodes))
+            //println()
 
             var shortestTreeLength = best
             var shortestTree: Set[Int] = null
