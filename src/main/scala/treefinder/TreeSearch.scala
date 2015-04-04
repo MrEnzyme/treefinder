@@ -44,10 +44,11 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
         val nodeScores: Map[Int, Double] = for((id, node) <- nodeSet) yield id -> scoreNode(id)
 
         // finds the overall score for a node, accounting for its distance to other nodes relative to their point-value
-        def evaluateNode(node: Int, relevant: Set[Int]): Double = {
+        def evaluateNode(node: Int, tree: Set[Int], relevant: Set[Int]): Double = {
             if(requiredNodes.contains(node)) return 0.0
 
-            val overlaidPathSize = relevant.map(getPath(node, _)).flatten.size
+            val overlaidPathSize = relevant.map(getPathToTree(_, tree + node)).flatten.diff(tree + node).size
+            
 
             nodeScores(node) + (relevant.toSeq.map(n => nodeScores(n)).sum * overlaidPathSize)
         }
@@ -66,11 +67,21 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
             val minRemainingDistance = getFurthestRequired(tree, remainingRelevantNodes)
             if(minRemainingDistance > best - tree.size) return null
 
-            val scores = openSet.toSeq.sortBy(evaluateNode(_, remainingRelevantNodes))
+            val scores = openSet.toSeq.sortBy(evaluateNode(_, tree, remainingRelevantNodes))
 
-            //println(TreeFinder.exportTree(6, tree.toSeq))
-            //for(s <- scores) print(nodeSet(s).name, s, evaluateNode(s, remainingRelevantNodes))
-            //println()
+            println("========\n" + TreeFinder.exportTree(6, tree.toSeq))
+            for(s <- scores) {
+                if(!remainingRelevantNodes.contains(s)) {
+                    val paths = remainingRelevantNodes.map(getPathToTree(_, tree + s)).flatten.diff(tree + s)
+                    val treeUrl = TreeFinder.exportTree(6, paths.toSeq)
+                    print(paths.size, treeUrl)
+                    if(treeUrl == "http://www.pathofexile.com/passive-skill-tree/AAAAAgYARXwPq66Lsw4hwDpCBbXdqC1HbWxQQjBxsNjndDy9S3gc3CxG1CPo1g==") {
+
+                    }
+                }
+                println(nodeSet(s).name, s, evaluateNode(s, tree, remainingRelevantNodes))
+            }
+            println()
 
             var shortestTreeLength = best
             var shortestTree: Set[Int] = null
@@ -79,8 +90,8 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
                 val bestTree = search(tree + s, openSet ++ neighbors(s).diff(tree) - s, shortestTreeLength)
                 if(bestTree != null) {
                     if(bestTree.size < shortestTreeLength) {
-                        //println("old min size: " + shortestTreeLength)
-                        //println(nodeSet(s).name)
+                        println("old min size: " + shortestTreeLength)
+                        println(nodeSet(s).name)
                         shortestTreeLength = bestTree.size
                         shortestTree = bestTree
                     }
