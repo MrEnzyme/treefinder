@@ -20,82 +20,6 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
     val debug = true
 
     def findTree(constraints: ConstraintSet, paths: Map[Int, Map[Int, IndexedSeq[Int]]]): Set[Int] = {
-        val tree = Set(44683)
-        val openSet = Set(45272, 17788)
-
-        val requiredNodes = constraints.keystones
-        val optionalNodes: Set[Int] = Set()
-        val relevantNodes = requiredNodes ++ optionalNodes
-
-        def getPath(a: Int, b: Int) = if(a == b) Seq(a) else paths(a)(b)
-        def getDistance(a: Int, b: Int) = getPath(a, b).length
-
-        def distanceToTree(node: Int, tree: Set[Int]) = getDistance(node, tree.minBy(getDistance(node, _)))
-        def getPathToTree(node: Int, tree: Set[Int]) = getPath(node, tree.minBy(getDistance(node, _)))
-
-        // scores a node in isolation based on its point-value
-        def scoreNode(node: Int): Double = {
-            if(requiredNodes.contains(node)) return 1.0
-            // take only the effects in this node that we care about
-            val relevantEffects = nodeSet(node).effects.filterKeys(constraints.effects.contains)
-            // map their values relative to the average and sum them to get the final score
-            relevantEffects.map(e => e._2/averageStatValues(e._1)).sum
-        }
-
-        // score all the nodes in the tree
-        val nodeScores: Map[Int, Double] = for((id, node) <- nodeSet) yield id -> scoreNode(id)
-
-        // finds the overall score for a node, accounting for its distance to other nodes relative to their point-value
-        def evaluateNode(node: Int, tree: Set[Int], relevant: Set[Int]): Double = {
-            if(requiredNodes.contains(node)) return 0.0
-
-            val newTree = tree + node
-            val overlaidPathsToTree = relevant.map(getPathToTree(_, newTree)).flatten.diff(newTree)
-
-            def evaluateNodeInPaths(n: Int) = {
-                relevant.map(getPathToTree(_, newTree + n)).flatten.diff(newTree).size + distanceToTree(n, newTree)
-            }
-            val bestNodeInPaths = overlaidPathsToTree.minBy(evaluateNodeInPaths)
-            if(debug) {
-                println("best node for " + nodeSet(node).name + ": " + (evaluateNodeInPaths(bestNodeInPaths), nodeSet(bestNodeInPaths).name) + ", " + TreeFinder.exportTree(6, Seq(bestNodeInPaths)))
-                val paths = relevant.map(getPathToTree(_, newTree + bestNodeInPaths)).flatten.diff(newTree).toSeq
-                println("paths to best node, size " + paths.size + ": " + TreeFinder.exportTree(6, paths))
-            }
-
-            evaluateNodeInPaths(bestNodeInPaths) - nodeScores(node)
-        }
-
-        def search(tree: Set[Int], openSet: Set[Int]): Set[Int] = {
-            if(satisfiesConstraints(tree, constraints)) return tree
-
-            val remainingRelevantNodes = relevantNodes.diff(tree)
-
-            val sortedNodes = openSet.toSeq.sortBy(evaluateNode(_, tree, remainingRelevantNodes))
-            val bestNode = sortedNodes.head
-
-            if(debug) {
-                println("========\n" + TreeFinder.exportTree(6, tree.toSeq))
-                for(n <- sortedNodes) {
-                    if (!remainingRelevantNodes.contains(n)) {
-                        val paths = remainingRelevantNodes.map(getPathToTree(_, tree + n)).flatten.diff(tree + n)
-                        val treeUrl = TreeFinder.exportTree(6, paths.toSeq)
-                        println(paths.size, treeUrl)
-                        if (treeUrl == "http://www.pathofexile.com/passive-skill-tree/AAAAAgYARXwPq66Lsw4hwDpCBbXdqC1HbWxQQjBxsNjndDy9S3gc3CxG1CPo1g==") {
-
-                        }
-                    }
-                    println(nodeSet(n).name, n, evaluateNode(n, tree, remainingRelevantNodes))
-                }
-                println()
-            }
-
-            search(tree + bestNode, openSet ++ neighbors(bestNode).diff(tree) - bestNode)
-        }
-
-        search(tree, openSet) - 44683
-    }
-
-    def findTreeAStar(constraints: ConstraintSet, paths: Map[Int, Map[Int, IndexedSeq[Int]]]): Set[Int] = {
         type Tree = Set[Int]
         val fScores = new HashMap[Tree, Double]
         val gScores = new HashMap[Tree, Double]
@@ -115,7 +39,7 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
         val optionalNodes: Set[Int] = Set()
         val relevantNodes = requiredNodes ++ optionalNodes
 
-        def getPath(a: Int, b: Int) = if(a == b) Seq(a) else paths(a)(b)
+        def getPath(a: Int, b: Int) = paths(a)(b)
         def getDistance(a: Int, b: Int) = getPath(a, b).length
 
         def distanceToTree(node: Int, tree: Set[Int]) = getDistance(node, tree.minBy(getDistance(node, _)))
@@ -135,25 +59,27 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
 
         def estimateRemainingPoints(tree: Tree): Double = {
             val relevant = relevantNodes.diff(tree)
+            if(relevant.isEmpty) return 0.0
 
             def getMinSpanningTree: Set[Int] = {
                 var vertices = Set(relevant.head)
-                val edges = new LinkedHashSet[Int]
+                val allNodes = new LinkedHashSet[Int]
+                allNodes ++= vertices
 
                 while(vertices != relevant) {
                     val remaining = relevant.diff(vertices)
                     val nearest = remaining.minBy(distanceToTree(_, vertices))
-                    edges ++= getPathToTree(nearest, vertices)
+                    allNodes ++= getPathToTree(nearest, vertices)
                     vertices += nearest
                 }
 
-                edges
+                allNodes
             }
-            val mst = getMinSpanningTree
+            val mst = getMinSpanningTree.diff(tree)
 
-            val combined = mst ++ getPathToTree(mst.minBy(distanceToTree(_, tree)), tree)
-            println(TreeFinder.exportTree(6, combined.toSeq))
-            combined.size
+            val combined = mst ++ getPathToTree(tree.minBy(distanceToTree(_, mst)), mst)
+            //println(TreeFinder.exportTree(6, getPathToTree(tree.minBy(distanceToTree(_, mst)), mst).toSeq), TreeFinder.exportTree(6, mst.toSeq))
+            combined.diff(tree).size
         }
 
         // get all the neighbor trees
@@ -166,7 +92,7 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
         var searchCount = 0
         while(openSet.nonEmpty) {
             searchCount += 1
-            if(searchCount % 100 == 0) println("searched " + searchCount)
+            if(searchCount % 1000 == 0) println("searched " + searchCount)
             val current = openPQ.dequeue()
             if(satisfiesConstraints(current, constraints)) return current - 44683
 
@@ -213,6 +139,8 @@ class TreeSearch(nodeSet: Map[Int, Node]) {
             neighborMap(id) ++= node.neighbors
         }
         for((id, neighbors) <- neighborMap; neighbor <- neighbors) neighborMap(neighbor) += id
+        // remove any class nodes as neighbors
+        for((id, neighbors) <- neighborMap; neighbor <- neighbors) if(nodes(neighbor).classNode) neighborMap(id) -= neighbor
         neighborMap
     }
 

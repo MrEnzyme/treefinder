@@ -11,12 +11,12 @@ object PathComputation {
     val pathFile = "paths.dat"
 
     // find all shortest paths between nodes on the tree
-    def computeAllPaths(pathSearch: PathSearch[Int], nodes: Set[Int], neighborNodes: Map[Int, Set[Int]]) = {
+    def computeAllPaths(nodeSet: Map[Int, Node], pathSearch: PathSearch[Int], nodes: Set[Int], neighborNodes: Map[Int, Set[Int]]) = {
         var pathsDone = 0
 
         (for(node <- nodes; if neighborNodes(node).nonEmpty) yield {
             val nodePaths =
-                for(otherNode <- nodes; if node != otherNode && neighborNodes(otherNode).nonEmpty) yield {
+                for(otherNode <- nodes; if node != otherNode && !nodeSet(otherNode).classNode && neighborNodes(otherNode).nonEmpty) yield {
                     pathsDone += 1
                     if(pathsDone % 10000 == 0) println(pathsDone + " paths calculated")
                     otherNode -> pathSearch.getPath(node, otherNode).toIndexedSeq

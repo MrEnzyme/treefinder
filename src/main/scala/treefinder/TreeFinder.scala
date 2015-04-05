@@ -29,15 +29,16 @@ object TreeFinder {
         // 5823, 35894
         // 14914, 23540
         // , 24426, 31703
-        println(exportTree(6, search.findTreeAStar(ConstraintSet(keystones = Set(14914, 23540)), paths).toSeq))
-        println(exportTree(6, search.findTreeAStar(ConstraintSet(keystones = Set(14914, 23540, 39085)), paths).toSeq))
-        println(exportTree(6, search.findTreeAStar(ConstraintSet(keystones = Set(14914, 23540, 39085, 24426, 31703, 11455, 44941)), paths).toSeq))
+        println(exportTree(6, search.pathSearch.getPath(44683, 55373)))
+        println(exportTree(6, search.findTree(ConstraintSet(keystones = Set(14914, 23540)), paths).toSeq))
+        println(exportTree(6, search.findTree(ConstraintSet(keystones = Set(14914, 23540, 39085)), paths).toSeq))
+        println(exportTree(6, search.findTree(ConstraintSet(keystones = Set(14914, 23540, 39085, 24426, 31703, 11455, 44941)), paths).toSeq))
     }
 
     def generatePathsFile() {
         val nodes = loadTree(treeFile)
         val search = new TreeSearch(nodes)
-        val paths = PathComputation.computeAllPaths(search.pathSearch, nodes.keySet, search.determineNeighbors(nodes))
+        val paths = PathComputation.computeAllPaths(nodes, search.pathSearch, nodes.keySet, search.determineNeighbors(nodes))
         PathComputation.savePaths(paths, pathFile)
     }
 
@@ -78,7 +79,8 @@ object TreeFinder {
                     if(amount.isDefined) (effect.replace(amount.get, "XX"), amount.get.toDouble)
                     else (effect, 1.0)
                 }
-            nodes(node.id.as[Double].get.toInt) = Node(node.dn.toString, coords, node.ks.as[Boolean].get, effects.toMap, neighbors.diff(classNodes))
+            val id = node.id.as[Double].get.toInt
+            nodes(id) = Node(node.dn.toString, coords, classNodes.contains(id), node.ks.as[Boolean].get, effects.toMap, neighbors)
         }
 
         nodes

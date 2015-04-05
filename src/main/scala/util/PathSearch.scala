@@ -8,7 +8,12 @@ class PathSearch[A](getNeighbors: A => Set[A], getDistance: (A, A) => Double, es
     val gScores = new HashMap[A, Double]
 
     val openPQ = new PriorityQueue[A]()(new Ordering[A] {
-        def compare(a: A, b: A) = (fScores(b) - fScores(a)).toInt
+        def compare(a: A, b: A) = {
+            val result = fScores(b) - fScores(a)
+            if(result < 0.0) -1
+            else if(result > 0.0) 1
+            else 0
+        }
     })
 
     val openSet = new HashSet[A]
