@@ -29,7 +29,7 @@ class PathSearch[A](getNeighbors: A => Set[A], getDistance: (A, A) => Double, es
         resetLists()
 
         gScores.put(startNode, 0)
-        fScores.put(startNode, getDistance(startNode, destNode))
+        fScores.put(startNode, estimateDistance(startNode, destNode))
         openPQ += startNode
         openSet += startNode
         while(openSet.nonEmpty) {

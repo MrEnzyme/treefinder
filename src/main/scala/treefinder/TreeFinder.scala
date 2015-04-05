@@ -29,9 +29,9 @@ object TreeFinder {
         // 5823, 35894
         // 14914, 23540
         // , 24426, 31703
-        val tree = search.findTree(ConstraintSet(keystones = Set(14914, 23540)), paths).toSeq
-        println("found tree ", tree)
-        println(exportTree(6, tree))
+        println(exportTree(6, search.findTreeAStar(ConstraintSet(keystones = Set(14914, 23540)), paths).toSeq))
+        println(exportTree(6, search.findTreeAStar(ConstraintSet(keystones = Set(14914, 23540, 39085)), paths).toSeq))
+        println(exportTree(6, search.findTreeAStar(ConstraintSet(keystones = Set(14914, 23540, 39085, 24426, 31703, 11455, 44941)), paths).toSeq))
     }
 
     def generatePathsFile() {
